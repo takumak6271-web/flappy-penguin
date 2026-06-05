@@ -371,9 +371,9 @@ const GY       = H * 0.88;
 
 // 難易度設定
 const DIFF_SETTINGS = {
-  easy:   { gap: 185, baseSpd: 2.2, flap: -4.2 },
-  normal: { gap: 155, baseSpd: 2.8, flap: -4.2 },
-  hard:   { gap: 118, baseSpd: 3.5, flap: -4.2 },
+  easy:   { gap: 185, baseSpd: 2.0, flap: -4.2, spdScale: 0.004, maxSpd: 3.0 },
+  normal: { gap: 155, baseSpd: 2.8, flap: -4.2, spdScale: 0.010, maxSpd: 5.5 },
+  hard:   { gap: 118, baseSpd: 3.5, flap: -4.2, spdScale: 0.015, maxSpd: 8.0 },
 };
 function diffGap()  { return DIFF_SETTINGS[selDiff].gap; }
 function diffSpd()  { return DIFF_SETTINGS[selDiff].baseSpd; }
@@ -605,7 +605,8 @@ function update() {
     if (selMode === '2p') updateBird(bird2);
     if (invincible > 0) invincible--;
 
-    const spd = diffSpd() * (1 + Math.max(score,score2) * 0.013);
+    const d = DIFF_SETTINGS[selDiff];
+    const spd = Math.min(d.baseSpd * (1 + Math.max(score,score2) * d.spdScale), d.maxSpd);
     if (frame % Math.round(105 - Math.min(Math.max(score,score2),50)) === 0) spawnPipe();
 
     const gap = diffGap();
