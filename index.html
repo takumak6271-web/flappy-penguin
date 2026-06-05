@@ -371,9 +371,9 @@ const GY       = H * 0.88;
 
 // 難易度設定
 const DIFF_SETTINGS = {
-  easy:   { gap: 185, baseSpd: 2.0, flap: -4.2, spdScale: 0.004, maxSpd: 3.0 },
-  normal: { gap: 155, baseSpd: 2.8, flap: -4.2, spdScale: 0.010, maxSpd: 5.5 },
-  hard:   { gap: 118, baseSpd: 3.5, flap: -4.2, spdScale: 0.015, maxSpd: 8.0 },
+  easy:   { gap: 230, baseSpd: 1.8, flap: -4.2, spdScale: 0.003, maxSpd: 2.6 },
+  normal: { gap: 195, baseSpd: 2.5, flap: -4.2, spdScale: 0.008, maxSpd: 4.5 },
+  hard:   { gap: 155, baseSpd: 3.2, flap: -4.2, spdScale: 0.012, maxSpd: 6.5 },
 };
 function diffGap()  { return DIFF_SETTINGS[selDiff].gap; }
 function diffSpd()  { return DIFF_SETTINGS[selDiff].baseSpd; }
@@ -602,7 +602,7 @@ function playBossDefeatSound() {
 
 function spawnPipe() {
   const gap = diffGap();
-  const topH = 60 + Math.random() * (H * 0.52 - gap * 0.2);
+  const topH = 80 + Math.random() * (GY - gap - 120);
   pipes.push({ x: W, topH, passed: false, passed2: false });
   // コインをギャップの中心に低確率で出現
   if (Math.random() < 0.55) {
