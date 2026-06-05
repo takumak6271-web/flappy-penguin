@@ -385,6 +385,12 @@ let invincible = 0;   // 無敵残りフレーム
 let timeLeft = 30;    // タイムアタック残り秒
 let p2alive = true;   // 2人対戦P2生存
 let particles = [];
+let boss = null;           // ボス
+let bossWarning = 0;       // ボス警告タイマー
+let nextBossScore = 30;    // 次のボス出現スコア
+let tauntTimer = 0;        // 煽りタイマー
+let tauntText = '';        // 煽りセリフ
+let tauntLife = 0;         // 煽り表示残り時間
 
 // 雲
 const clouds = Array.from({length:5},(_,i)=>({
@@ -402,6 +408,8 @@ function initGame() {
   timeLeft = 30;
   p2alive = selMode === '2p';
   state = 'ready'; particles = [];
+  boss = null; bossWarning = 0; nextBossScore = 30;
+  tauntTimer = 0; tauntText = ''; tauntLife = 0;
 }
 
 // ---- パーティクル ----
@@ -644,6 +652,45 @@ function update() {
     items = items.filter(it => it.x > -20 && !it.collected);
 
     // 衝突判定
+    // ボス出現チェック
+    if (score >= nextBossScore && !boss && bossWarning === 0) {
+      bossWarning = 120; // 2秒警告
+    }
+    if (bossWarning > 0) {
+      bossWarning--;
+      if (bossWarning === 0) {
+        // ボス登場！
+        const bossY = GY * 0.3 + Math.random() * GY * 0.45;
+        boss = { x: W + 100, y: bossY, w: 110, h: 60, spd: 2.8, hp: 1 };
+        nextBossScore += 30;
+      }
+    }
+    if (boss) {
+      boss.x -= boss.spd;
+      // ボスがP1に当たった
+      if (!invincible && bird.alive &&
+          BX + BSZ*0.36 > boss.x && BX - BSZ*0.36 < boss.x + boss.w &&
+          bird.y + BSZ*0.36 > boss.y - boss.h/2 && bird.y - BSZ*0.36 < boss.y + boss.h/2) {
+        bird.alive = false; spawnExplosion(BX, bird.y); playGameOverSound();
+      }
+      // P2
+      if (selMode==='2p' && bird2 && bird2.alive &&
+          BX + BSZ*0.36 > boss.x && BX - BSZ*0.36 < boss.x + boss.w &&
+          bird2.y + BSZ*0.36 > boss.y - boss.h/2 && bird2.y - BSZ*0.36 < boss.y + boss.h/2) {
+        bird2.alive = false; spawnExplosion(BX, bird2.y);
+      }
+      if (boss.x + boss.w < -10) boss = null; // 画面外で消える
+    }
+
+    // 煽り演出（スコア15以上で発動）
+    tauntTimer++;
+    if (score >= 15 && tauntLife <= 0 && tauntTimer % 280 === 0) {
+      const taunts = ['楽勝〜😎','ヘーイ！','もっとこい！','余裕じゃん','ふふふ…','強すぎｗ','見てる〜？','このへいきへいき'];
+      tauntText = taunts[Math.floor(Math.random() * taunts.length)];
+      tauntLife = 130;
+    }
+    if (tauntLife > 0) tauntLife--;
+
     const p1hit = !invincible && bird.alive && checkHit(bird);
     const p2hit = selMode==='2p' && bird2 && bird2.alive && checkHit(bird2);
     if (p1hit) { bird.alive=false; spawnExplosion(BX, bird.y); playGameOverSound(); }
@@ -729,6 +776,65 @@ function drawSky(s) {
 }
 
 // アイテム描画
+function drawBoss(b) {
+  ctx.save();
+  ctx.translate(b.x, b.y);
+  const t = Date.now() * 0.003;
+  const bob = Math.sin(t) * 5;
+  ctx.translate(0, bob);
+
+  // クジラ本体
+  const g = ctx.createLinearGradient(0, -b.h/2, 0, b.h/2);
+  g.addColorStop(0, '#2255AA'); g.addColorStop(1, '#113377');
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, b.w/2, b.h/2, 0, 0, Math.PI*2);
+  ctx.fill();
+
+  // お腹（白）
+  ctx.fillStyle = 'rgba(255,255,255,0.25)';
+  ctx.beginPath();
+  ctx.ellipse(b.w*0.05, b.h*0.1, b.w*0.28, b.h*0.28, 0, 0, Math.PI*2);
+  ctx.fill();
+
+  // 尻尾
+  ctx.fillStyle = '#113377';
+  ctx.beginPath();
+  ctx.moveTo(b.w/2, 0);
+  ctx.lineTo(b.w/2 + 30, -22);
+  ctx.lineTo(b.w/2 + 30, 22);
+  ctx.closePath(); ctx.fill();
+
+  // 目
+  ctx.fillStyle = 'white';
+  ctx.beginPath(); ctx.arc(-b.w*0.28, -b.h*0.12, 7, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#111';
+  ctx.beginPath(); ctx.arc(-b.w*0.28, -b.h*0.12, 4, 0, Math.PI*2); ctx.fill();
+
+  // 潮吹き
+  if (Math.sin(t * 2) > 0.6) {
+    ctx.strokeStyle = 'rgba(100,200,255,0.7)';
+    ctx.lineWidth = 3;
+    for (let i = -1; i <= 1; i++) {
+      ctx.beginPath();
+      ctx.moveTo(-b.w*0.3 + i*8, -b.h/2);
+      ctx.lineTo(-b.w*0.3 + i*12, -b.h/2 - 30 - Math.abs(i)*10);
+      ctx.stroke();
+    }
+  }
+
+  // 「じゃまじゃま〜！」セリフ
+  if (Math.sin(t) > 0.7) {
+    ctx.fillStyle = 'white';
+    ctx.font = 'bold 13px Arial'; ctx.textAlign = 'center';
+    rRect(-b.w*0.2 - 40, -b.h/2 - 38, 100, 26, 8); ctx.fill();
+    ctx.fillStyle = '#2255AA';
+    ctx.fillText('じゃまじゃま〜！', -b.w*0.2 + 10, -b.h/2 - 20);
+  }
+
+  ctx.restore();
+}
+
 function drawItems() {
   items.forEach(it => {
     if (it.collected) return;
@@ -829,10 +935,44 @@ function render() {
     ctx.beginPath(); ctx.moveTo(gxi+8,GY+4); ctx.lineTo(gxi+28,GY+13); ctx.lineTo(gxi+48,GY+5); ctx.stroke();
   }
 
+  // ボス描画
+  if (boss) drawBoss(boss);
+
   // 鳥 P2 (behind P1)
   if (selMode === '2p' && bird2) drawBirdSprite(bird2, (selChar % 3) + 1);
   // 鳥 P1
   if (bird) drawBirdSprite(bird, selChar);
+
+  // 煽り吹き出し
+  if (tauntLife > 0 && bird && bird.alive) {
+    const alpha = Math.min(1, tauntLife / 20);
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.font = 'bold 15px Arial';
+    const tw = ctx.measureText(tauntText).width + 16;
+    const tx = BX + 30, ty = bird.y - 40;
+    ctx.fillStyle = 'white';
+    rRect(tx - 8, ty - 20, tw, 28, 8); ctx.fill();
+    ctx.fillStyle = '#FF6699';
+    ctx.textAlign = 'left';
+    ctx.fillText(tauntText, tx, ty - 1);
+    // しっぽ三角
+    ctx.fillStyle = 'white';
+    ctx.beginPath(); ctx.moveTo(tx, ty+8); ctx.lineTo(tx-12, ty+16); ctx.lineTo(tx+4, ty+8); ctx.fill();
+    ctx.restore();
+  }
+
+  // ボス警告
+  if (bossWarning > 0) {
+    const flash = Math.floor(Date.now()/150)%2===0;
+    if (flash) {
+      ctx.fillStyle = 'rgba(255,0,0,0.18)';
+      ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = '#FF3333';
+      ctx.font = 'bold 28px Arial'; ctx.textAlign = 'center';
+      ctx.fillText('⚠️ ボス来る！', W/2, H/2);
+    }
+  }
 
   // パーティクル
   drawParticles();
