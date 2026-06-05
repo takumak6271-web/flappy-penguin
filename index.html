@@ -534,6 +534,8 @@ function flap(player) {
   if (player === 1 && bird && bird.alive) {
     bird.vy = diffFlap(); bird.flap = 10;
     playFlapSound(); spawnFlap(BX, bird.y);
+    // ボスに攻撃
+    if (boss) damageBoss();
   }
   if (player === 2 && bird2 && bird2.alive) {
     bird2.vy = diffFlap(); bird2.flap = 10;
@@ -551,6 +553,52 @@ btnP1.addEventListener('touchstart', e => { e.preventDefault(); flap(1); }, {pas
 btnP1.addEventListener('click', () => flap(1));
 btnP2.addEventListener('touchstart', e => { e.preventDefault(); flap(2); }, {passive:false});
 btnP2.addEventListener('click', () => flap(2));
+
+function damageBoss() {
+  if (!boss) return;
+  boss.hp--;
+  boss.hitFlash = 10;
+  playBossHitSound();
+  spawnScore(boss.x + boss.w/2, boss.y); // ヒットエフェクト
+  if (boss.hp <= 0) {
+    spawnExplosion(boss.x + boss.w/2, boss.y);
+    spawnExplosion(boss.x + boss.w/4, boss.y - 20);
+    playBossDefeatSound();
+    score += 5; // ボス倒したらボーナス
+    spawnScore(boss.x + boss.w/2, boss.y - 30);
+    boss = null;
+  }
+}
+
+function playBossHitSound() {
+  try {
+    const c = getAudioCtx();
+    const o = c.createOscillator(), g = c.createGain();
+    o.connect(g); g.connect(c.destination);
+    o.type = 'square';
+    o.frequency.setValueAtTime(200, c.currentTime);
+    o.frequency.exponentialRampToValueAtTime(80, c.currentTime + 0.08);
+    g.gain.setValueAtTime(0.15, c.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.09);
+    o.start(c.currentTime); o.stop(c.currentTime + 0.1);
+  } catch(e){}
+}
+
+function playBossDefeatSound() {
+  try {
+    const c = getAudioCtx();
+    [0,0.1,0.2,0.32,0.46].forEach((t,i) => {
+      const freq = [523,659,784,1047,1319][i];
+      const o = c.createOscillator(), g = c.createGain();
+      o.connect(g); g.connect(c.destination);
+      o.type = 'triangle';
+      o.frequency.value = freq;
+      g.gain.setValueAtTime(0.2, c.currentTime+t);
+      g.gain.exponentialRampToValueAtTime(0.001, c.currentTime+t+0.18);
+      o.start(c.currentTime+t); o.stop(c.currentTime+t+0.2);
+    });
+  } catch(e){}
+}
 
 function spawnPipe() {
   const gap = diffGap();
@@ -660,7 +708,7 @@ function update() {
       bossWarning--;
       if (bossWarning === 0) {
         // ボス登場！（上下に動くので中央付近からスタート）
-        boss = { x: W + 100, baseY: GY * 0.5, y: GY * 0.5, w: 100, h: 52, spd: 2.4, t: 0 };
+        boss = { x: W + 100, baseY: GY * 0.5, y: GY * 0.5, w: 100, h: 52, spd: 2.4, t: 0, hp: 8, hitFlash: 0 };
         nextBossScore += 30;
       }
     }
@@ -785,6 +833,9 @@ function drawBoss(b) {
   const bob = Math.sin(t) * 5;
   ctx.translate(0, bob);
 
+  // ヒットフラッシュ
+  if (b.hitFlash > 0) { b.hitFlash--; ctx.globalAlpha = 0.5; }
+
   // クジラ本体
   const g = ctx.createLinearGradient(0, -b.h/2, 0, b.h/2);
   g.addColorStop(0, '#2255AA'); g.addColorStop(1, '#113377');
@@ -833,6 +884,15 @@ function drawBoss(b) {
     ctx.fillStyle = '#2255AA';
     ctx.fillText('じゃまじゃま〜！', -b.w*0.2 + 10, -b.h/2 - 20);
   }
+
+  // HPバー
+  ctx.globalAlpha = 1;
+  const barW = b.w * 0.9, barH = 7;
+  const barX = -barW/2, barY = -b.h/2 - 14;
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  rRect(barX-1, barY-1, barW+2, barH+2, 3); ctx.fill();
+  ctx.fillStyle = b.hp > 4 ? '#44FF66' : b.hp > 2 ? '#FFAA00' : '#FF3333';
+  rRect(barX, barY, barW * (b.hp/8), barH, 3); ctx.fill();
 
   ctx.restore();
 }
@@ -1114,20 +1174,31 @@ function playFlapSound() {
 function playGameOverSound() {
   try {
     const ctx = getAudioCtx();
-    const notes = [440, 349, 294, 220];
-    notes.forEach((freq, i) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain); gain.connect(ctx.destination);
-      osc.type = 'sawtooth';
-      const t = ctx.currentTime + i * 0.13;
-      osc.frequency.setValueAtTime(freq, t);
-      osc.frequency.exponentialRampToValueAtTime(freq * 0.7, t + 0.12);
-      gain.gain.setValueAtTime(0.22, t);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.13);
-      osc.start(t);
-      osc.stop(t + 0.14);
-    });
+    const now = ctx.currentTime;
+    const pitch = {1:1.0, 2:0.82, 3:1.18}[selChar] || 1.0;
+
+    // ピィーーーー（高音から徐々に下がって消える）
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(1400 * pitch, now);
+    osc.frequency.exponentialRampToValueAtTime(600 * pitch, now + 0.8);
+    gain.gain.setValueAtTime(0.30, now);
+    gain.gain.setValueAtTime(0.28, now + 0.3);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.9);
+    osc.start(now); osc.stop(now + 0.9);
+
+    // 倍音で厚み
+    const osc2 = ctx.createOscillator();
+    const gain2 = ctx.createGain();
+    osc2.connect(gain2); gain2.connect(ctx.destination);
+    osc2.type = 'triangle';
+    osc2.frequency.setValueAtTime(700 * pitch, now);
+    osc2.frequency.exponentialRampToValueAtTime(300 * pitch, now + 0.8);
+    gain2.gain.setValueAtTime(0.12, now);
+    gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+    osc2.start(now); osc2.stop(now + 0.8);
   } catch(e){}
 }
 
