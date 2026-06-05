@@ -371,12 +371,13 @@ const GY       = H * 0.88;
 
 // 難易度設定
 const DIFF_SETTINGS = {
-  easy:   { gap: 185, baseSpd: 2.2 },
-  normal: { gap: 155, baseSpd: 2.8 },
-  hard:   { gap: 118, baseSpd: 3.5 },
+  easy:   { gap: 185, baseSpd: 2.2, flap: -5.8 },
+  normal: { gap: 155, baseSpd: 2.8, flap: -7.0 },
+  hard:   { gap: 118, baseSpd: 3.5, flap: -7.8 },
 };
 function diffGap()  { return DIFF_SETTINGS[selDiff].gap; }
 function diffSpd()  { return DIFF_SETTINGS[selDiff].baseSpd; }
+function diffFlap() { return DIFF_SETTINGS[selDiff].flap; }
 
 let bird, bird2, pipes, gx, frame, score, score2, state, deadTimer;
 let items = [];       // コイン・魚アイテム
@@ -523,11 +524,11 @@ function flap(player) {
   if (state === 'dead') { if (deadTimer > 40) showTitle(); return; }
   if (state === 'ready') state = 'playing';
   if (player === 1 && bird && bird.alive) {
-    bird.vy = FLAP_V; bird.flap = 10;
+    bird.vy = diffFlap(); bird.flap = 10;
     playFlapSound(); spawnFlap(BX, bird.y);
   }
   if (player === 2 && bird2 && bird2.alive) {
-    bird2.vy = FLAP_V; bird2.flap = 10;
+    bird2.vy = diffFlap(); bird2.flap = 10;
     playFlapSound(); spawnFlap(BX, bird2.y);
   }
 }
