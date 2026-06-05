@@ -128,6 +128,29 @@ canvas { display: block; border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0
   color: rgba(180,210,255,0.6);
   font-size: 13px;
 }
+#p2buttons {
+  display: none;
+  gap: 12px;
+  margin-top: 14px;
+  width: 360px;
+}
+#p2buttons button {
+  flex: 1;
+  padding: 22px 0;
+  font-size: 22px;
+  font-weight: bold;
+  border: none;
+  border-radius: 16px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+  transition: transform 0.08s, opacity 0.08s;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.35);
+}
+#p2buttons button:active { transform: scale(0.94); opacity: 0.8; }
+#btnP1 { background: linear-gradient(135deg,#44bb66,#228844); color: white; }
+#btnP2 { background: linear-gradient(135deg,#ee5577,#aa2244); color: white; }
 </style>
 </head>
 <body>
@@ -178,6 +201,10 @@ canvas { display: block; border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0
 <div id="gameScreen">
   <canvas id="c"></canvas>
   <div id="gameHint">クリック / スペースキー でジャンプ</div>
+  <div id="p2buttons">
+    <button id="btnP1">🐧 P1</button>
+    <button id="btnP2">🐧 P2</button>
+  </div>
 </div>
 
 <script>
@@ -263,6 +290,7 @@ function showTitle() {
 function startGame() {
   document.getElementById('titleScreen').style.display = 'none';
   document.getElementById('gameScreen').style.display = 'flex';
+  document.getElementById('p2buttons').style.display = selMode === '2p' ? 'flex' : 'none';
   initGame();
   stopBGM(); startBGM();
   if (!loopStarted) { loopStarted = true; requestAnimationFrame(loop); }
@@ -462,6 +490,14 @@ function flap(player) {
 
 C.addEventListener('click', () => flap(1));
 C.addEventListener('touchstart', e => { e.preventDefault(); flap(1); }, {passive:false});
+
+// P1・P2ボタン
+const btnP1 = document.getElementById('btnP1');
+const btnP2 = document.getElementById('btnP2');
+btnP1.addEventListener('touchstart', e => { e.preventDefault(); flap(1); }, {passive:false});
+btnP1.addEventListener('click', () => flap(1));
+btnP2.addEventListener('touchstart', e => { e.preventDefault(); flap(2); }, {passive:false});
+btnP2.addEventListener('click', () => flap(2));
 
 function spawnPipe() {
   const gap = diffGap();
