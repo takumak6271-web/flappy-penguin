@@ -659,24 +659,26 @@ function update() {
     if (bossWarning > 0) {
       bossWarning--;
       if (bossWarning === 0) {
-        // ボス登場！
-        const bossY = GY * 0.3 + Math.random() * GY * 0.45;
-        boss = { x: W + 100, y: bossY, w: 110, h: 60, spd: 2.8, hp: 1 };
+        // ボス登場！（上下に動くので中央付近からスタート）
+        boss = { x: W + 100, baseY: GY * 0.5, y: GY * 0.5, w: 100, h: 52, spd: 2.4, t: 0 };
         nextBossScore += 30;
       }
     }
     if (boss) {
       boss.x -= boss.spd;
-      // ボスがP1に当たった
+      boss.t += 0.03;
+      // 上下にゆっくり動く（常に通れる隙間あり）
+      boss.y = boss.baseY + Math.sin(boss.t) * (GY * 0.28);
+      // ボスがP1に当たった（当たり判定を少し小さめに）
       if (!invincible && bird.alive &&
-          BX + BSZ*0.36 > boss.x && BX - BSZ*0.36 < boss.x + boss.w &&
-          bird.y + BSZ*0.36 > boss.y - boss.h/2 && bird.y - BSZ*0.36 < boss.y + boss.h/2) {
+          BX + BSZ*0.3 > boss.x && BX - BSZ*0.3 < boss.x + boss.w &&
+          bird.y + BSZ*0.3 > boss.y - boss.h/2 && bird.y - BSZ*0.3 < boss.y + boss.h/2) {
         bird.alive = false; spawnExplosion(BX, bird.y); playGameOverSound();
       }
       // P2
       if (selMode==='2p' && bird2 && bird2.alive &&
-          BX + BSZ*0.36 > boss.x && BX - BSZ*0.36 < boss.x + boss.w &&
-          bird2.y + BSZ*0.36 > boss.y - boss.h/2 && bird2.y - BSZ*0.36 < boss.y + boss.h/2) {
+          BX + BSZ*0.3 > boss.x && BX - BSZ*0.3 < boss.x + boss.w &&
+          bird2.y + BSZ*0.3 > boss.y - boss.h/2 && bird2.y - BSZ*0.3 < boss.y + boss.h/2) {
         bird2.alive = false; spawnExplosion(BX, bird2.y);
       }
       if (boss.x + boss.w < -10) boss = null; // 画面外で消える
